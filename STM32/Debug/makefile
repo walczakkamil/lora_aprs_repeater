@@ -60,8 +60,8 @@ all: main-build
 main-build: Lora_APRS_repeater.elf secondary-outputs
 
 # Tool invocations
-Lora_APRS_repeater.elf Lora_APRS_repeater.map: $(OBJS) $(USER_OBJS) C:\Users\walcz\OneDrive\Documents\stm32\Lora_RX_gemini\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Lora_APRS_repeater.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\walcz\OneDrive\Documents\stm32\Lora_RX_gemini\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Lora_APRS_repeater.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
+Lora_APRS_repeater.elf Lora_APRS_repeater.map: $(OBJS) $(USER_OBJS) C:\Users\walcz\PycharmProjects\lora_aprs_reapeter\STM32\STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Lora_APRS_repeater.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"C:\Users\walcz\PycharmProjects\lora_aprs_reapeter\STM32\STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Lora_APRS_repeater.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

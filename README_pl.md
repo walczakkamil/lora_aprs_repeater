@@ -54,7 +54,7 @@ Urządzenie wykorzystuje magistralę **SPI1** współdzieloną przez oba moduły
 | SCK | **PA5** | Wspólne SPI |
 | NSS (CS) | **PA3** | Chip Select |
 | RST | **PB10** | Reset |
-| DIO0 | *(NC)* | Niepodłączony (TX Blocking) |
+| DIO0 | **PB11** | Przerwanie (EXTI) |
 | 3.3V | 3.3V | |
 | GND | GND | |
 

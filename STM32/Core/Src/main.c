@@ -103,6 +103,7 @@ uint8_t queueTail = 0;
 
 uint32_t lastTelemetryTime = 0;
 volatile uint8_t packetReceivedFlag = 0;
+volatile uint8_t txPacketReceivedFlag = 0;
 
 // Struktura pomocnicza modułu
 typedef struct {
@@ -213,16 +214,12 @@ void LoRa_Init(LoRa_Module* mod) {
     LoRa_WriteReg(mod, REG_MODEM_CONFIG_2, (LORA_SF << 4) | 0x04);
 
     // 5. Konfiguracja mocy i wzmocnienia (LNA)
-    if (mod->CS_Pin == RX_CS_PIN) { // Jeśli to moduł odbiorczy
-        // LNA Gain: Max gain, Boost on (0x23 lub 0x20 | 0x03)
-        LoRa_WriteReg(mod, REG_LNA, 0x23);
-    } else { // Jeśli to nadajnik
-    	LoRa_WriteReg(mod, 0x0B, 0x2B); // OCP (Over Current Protection) ustawione na 100mA
-    	LoRa_WriteReg(mod, 0x4D, 0x84);	// 0x84 to tryb domyślny (do 17 dBm)
-    									// 0x87 to tryb High Power (20 dBm)
-    	// Max Power: PA_BOOST pin, 17dBm (0x8F) lub więcej przy PA_DAC 0xFF - pełna moc 100mW - 20dBm
-    	LoRa_WriteReg(mod, REG_PA_CONFIG, 0x8F);
-    }
+    // Ustawiamy LNA Gain (Max gain, Boost on) oraz PA_CONFIG i OCP dla obu modułów,
+    // aby mogły one pracować dwukierunkowo (zarówno RX jak i TX).
+    LoRa_WriteReg(mod, REG_LNA, 0x23);
+    LoRa_WriteReg(mod, 0x0B, 0x2B); // OCP (Over Current Protection) ustawione na 100mA
+    LoRa_WriteReg(mod, 0x4D, 0x84); // 0x84 to tryb domyślny (do 17 dBm)
+    LoRa_WriteReg(mod, REG_PA_CONFIG, 0x8F); // PA_BOOST pin, 17dBm
 
     // 6. Konfiguracja FIFO
     LoRa_WriteReg(mod, REG_FIFO_TX_BASE_ADDR, 0);
@@ -282,18 +279,18 @@ uint8_t LoRa_Send(LoRa_Module* mod, uint8_t* data, uint8_t len) {
 uint8_t LoRa_Receive(LoRa_Module* mod, uint8_t* buffer) {
     uint8_t irq = LoRa_ReadReg(mod, REG_IRQ_FLAGS);
     if(irq & 0x40) { // RxDone
+        uint8_t len = 0;
         if(!(irq & 0x20)) { // CRC OK
-            uint8_t len = LoRa_ReadReg(mod, REG_RX_NB_BYTES);
+            len = LoRa_ReadReg(mod, REG_RX_NB_BYTES);
             uint8_t currentAddr = LoRa_ReadReg(mod, REG_FIFO_RX_CURRENT_ADDR);
             LoRa_WriteReg(mod, REG_FIFO_ADDR_PTR, currentAddr);
             for(int i=0; i<len; i++) {
                 buffer[i] = LoRa_ReadReg(mod, REG_FIFO);
             }
-            LoRa_WriteReg(mod, REG_IRQ_FLAGS, 0xFF);
-            return len;
         }
+        LoRa_WriteReg(mod, REG_IRQ_FLAGS, 0xFF); // Czyszczenie flag tylko gdy wystąpiło RxDone
+        return len;
     }
-    LoRa_WriteReg(mod, REG_IRQ_FLAGS, 0xFF);
     return 0;
 }
 
@@ -363,10 +360,12 @@ void SendTelemetry(void) {
     Queue_Push((uint8_t*)packet, strlen(packet), 1); // Wysyłamy całość (z krzakami)
 }
 
-// Przerwanie EXTI (dla RX DIO0 - PB1)
+// Przerwanie EXTI (dla RX DIO0 - PB1 oraz TX DIO0 - PB11)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-    if(GPIO_Pin == GPIO_PIN_1) {
+    if(GPIO_Pin == LORA_DIO0_Pin) {
         packetReceivedFlag = 1;
+    } else if(GPIO_Pin == TX_DIO0_Pin) {
+        txPacketReceivedFlag = 1;
     }
 }
 
@@ -596,6 +595,79 @@ int main(void)
 			//LoRa_Send(&loraTX, txBuffer, len);
 			if (LoRa_Send(&loraTX, txBuffer, len)) {
 			    DebugPrint("TX: Success\r\n");
+
+			    // --- NOWE: Odbiór odpowiedzi na TX przez 10s po wysłaniu ---
+			    DebugPrint("TX_RX: Switching TX module to RX mode for 10s response window...\r\n");
+
+			    // Przygotowanie loraTX do odbioru: STDBY -> Reset FIFO ptr -> Clear IRQ -> RX_CONTINUOUS
+			    LoRa_SetMode(&loraTX, MODE_STDBY);
+			    HAL_Delay(2);
+			    LoRa_WriteReg(&loraTX, REG_FIFO_ADDR_PTR, 0);
+			    LoRa_WriteReg(&loraTX, REG_DIO_MAPPING_1, 0x00); // Mapowanie DIO0 na RxDone (00)
+			    LoRa_WriteReg(&loraTX, REG_IRQ_FLAGS, 0xFF); // Czyszczenie starych flag
+			    txPacketReceivedFlag = 0;
+			    LoRa_SetMode(&loraTX, MODE_RX_CONTINUOUS);
+
+			    uint32_t waitStart = HAL_GetTick();
+			    uint8_t txReplyReceived = 0;
+
+			    while (HAL_GetTick() - waitStart < 10000) {
+			        HAL_IWDG_Refresh(&hiwdg); // Odświeżanie watchdoga
+
+			        // 1. Sprawdzamy czy w międzyczasie nadszedł pakiet na loraRX (bezprzerwowe kolejkowanie RX)
+			        if (packetReceivedFlag) {
+			            packetReceivedFlag = 0;
+			            uint8_t rxBuf[MAX_PKT_LEN];
+			            uint8_t rxLen = LoRa_Receive(&loraRX, rxBuf);
+			            if (rxLen > 0) {
+			                DebugPrint("RX (during TX_RX wait): Recv %d bytes, queuing...\r\n", rxLen);
+			                Queue_Push(rxBuf, rxLen, 1);
+			            }
+			            LoRa_SetMode(&loraRX, MODE_RX_CONTINUOUS);
+			        }
+
+			        // 2. Sprawdzamy czy nadeszła odpowiedź na loraTX (wyzwolona przez EXTI15_10 na PB11 lub polling)
+			        uint8_t replyBuffer[MAX_PKT_LEN];
+			        uint8_t replyLen = 0;
+
+			        if (txPacketReceivedFlag) {
+			            txPacketReceivedFlag = 0;
+			            replyLen = LoRa_Receive(&loraTX, replyBuffer);
+			        } else {
+			            // Polling bezpośredni (zabezpieczenie na przypadek braku przerwania)
+			            replyLen = LoRa_Receive(&loraTX, replyBuffer);
+			        }
+
+			        if (replyLen > 0) {
+			            DebugPrint("TX_RX: Reply received on TX module (%d B)\r\n", replyLen);
+
+			            if (HAL_GPIO_ReadPin(DEBUG_PIN_PORT, DEBUG_PIN) == GPIO_PIN_RESET) {
+			                char debugMsg[MAX_PKT_LEN + 1];
+			                int safeLen = (replyLen < MAX_PKT_LEN) ? replyLen : MAX_PKT_LEN;
+			                memcpy(debugMsg, replyBuffer, safeLen);
+			                debugMsg[safeLen] = '\0';
+			                DebugPrint("TX_RX REPLY CONTENT: %s\r\n", debugMsg);
+			            }
+
+			            // Retransmisja odebranej odpowiedzi przez moduł RX
+			            DebugPrint("TX_RX: Retransmitting reply via RX module...\r\n");
+			            LoRa_Send(&loraRX, replyBuffer, replyLen);
+			            LoRa_SetMode(&loraRX, MODE_RX_CONTINUOUS);
+
+			            txReplyReceived = 1;
+			            break; // Kończymy okno oczekiwania
+			        }
+
+			        HAL_Delay(5);
+			    }
+
+			    if (!txReplyReceived) {
+			        DebugPrint("TX_RX: 10s wait window ended, no reply received.\r\n");
+			    }
+
+			    // Przełączenie loraTX z powrotem w uśpienie
+			    LoRa_SetMode(&loraTX, MODE_SLEEP);
+			    // -------------------------------------------------------------
 			} else {
 				if (msg_tx_counter < 3) {
 					DebugPrint("TX: FAILED! Re-queuing...\r\n");
@@ -948,7 +1020,8 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
