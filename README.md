@@ -86,14 +86,18 @@ To view device operation:
 
 Example logs:
 ```text
-SYS: Booting...
-SYS: RX Init OK
-SYS: TX Init OK
-RX: Recv 89 bytes
-RX CONTENT (TXT): <▒NOCALL-10>APLRG1...
-QUEUE: Added packet (89 B)
+RX: Recv 77 bytes
+RX CONTENT (TXT): <▒SP7FM-2>APLRG1,WIDE1-1:=L4@&ySI4l_ !GTracker via lora_aprs_reapeater|$E!=|
+RX HEX: 3C FF 01 53 50 37 46 4D 2D 32 3E 41 50 4C 52 47 31 2C 57 49 44 45 31 2D 31 3A 3D 4C 34 40 26 79 53 49 34 6C 5F 20 21 47 54 72 61 63 6B 65 72 20 76 69 61 20 6C 6F 72 61 5F 61 70 72 73 5F 72 65 61 70 65 61 74 65 72 7C 24 45 21 3D 7C
+QUEUE: Package added (77 B)
 TX: Preparing to send...
-APRS CONTENT: <▒NOCALL-10>APLRG1...
+TX msg. counter: 1
+APRS CONTENT: <▒SP7FM-2>APLRG1,WIDE1-1:=L4@&ySI4l_ !GTracker via lora_aprs_reapeater|$E!=|
+TX: Success
+TX_RX: Switching TX module to RX mode for 10s response window...
+TX_RX: Reply received on TX module (79 B)
+TX_RX REPLY CONTENT: <▒SP7FM-2>APLRG1,SP7FM-10*:=L4@&ySI4l_ !GTracker via lora_aprs_reapeater|$E!=|
+TX_RX: Retransmitting reply via RX module...
 TX: Done.
 ```
 If pin PB12 is open (High state - PullUp), the repeater operates "silently" on UART, saving processor time.
