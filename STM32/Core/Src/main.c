@@ -76,9 +76,15 @@ UART_HandleTypeDef huart1;
 // --- LORA Parameters---
 #define LORA_RX_FREQ    434855000
 #define LORA_TX_FREQ    434955000
-#define LORA_SF         9
-#define LORA_BW_IDX     7         		// 125 kHz
-#define LORA_CR         3         		// 4/7
+
+#define LORA_RX_SF      9
+#define LORA_RX_BW_IDX  7         		// 125 kHz (7 = 125 kHz)
+#define LORA_RX_CR      3         		// 4/7
+
+#define LORA_TX_SF      9
+#define LORA_TX_BW_IDX  7         		// 125 kHz (7 = 125 kHz)
+#define LORA_TX_CR      3         		// 4/7
+
 #define TELEMETRY_INTERVAL 3600000 		// 1h
 #define APRS_CALLSIGN   "SP7FM-1"
 #define APRS_COORDS     "!5144.22N/01934.44E"
@@ -111,10 +117,13 @@ typedef struct {
     GPIO_TypeDef* RST_Port;
     uint16_t      RST_Pin;
     uint32_t      Frequency;
+    uint8_t       SpreadingFactor;
+    uint8_t       BandwidthIdx;
+    uint8_t       CodingRate;
 } LoRa_Module;
 
-LoRa_Module loraRX = { RX_CS_PORT, RX_CS_PIN, RX_RST_PORT, RX_RST_PIN, LORA_RX_FREQ };
-LoRa_Module loraTX = { TX_CS_PORT, TX_CS_PIN, TX_RST_PORT, TX_RST_PIN, LORA_TX_FREQ };
+LoRa_Module loraRX = { RX_CS_PORT, RX_CS_PIN, RX_RST_PORT, RX_RST_PIN, LORA_RX_FREQ, LORA_RX_SF, LORA_RX_BW_IDX, LORA_RX_CR };
+LoRa_Module loraTX = { TX_CS_PORT, TX_CS_PIN, TX_RST_PORT, TX_RST_PIN, LORA_TX_FREQ, LORA_TX_SF, LORA_TX_BW_IDX, LORA_TX_CR };
 
 /* USER CODE END PV */
 
@@ -205,12 +214,11 @@ void LoRa_Init(LoRa_Module* mod) {
     LoRa_WriteReg(mod, REG_FRF_LSB, (uint8_t)(frf >> 0));
 
     // 4. Modem config (BW, CR, SF)
-    // BW=125kHz, CR=4/7, Explicit Header
-    uint8_t config1 = (7 << 4) | (LORA_CR << 1);
+    uint8_t config1 = (mod->BandwidthIdx << 4) | (mod->CodingRate << 1);
     LoRa_WriteReg(mod, REG_MODEM_CONFIG_1, config1);
 
-    // SF=9, CRC ON (0x04)
-    LoRa_WriteReg(mod, REG_MODEM_CONFIG_2, (LORA_SF << 4) | 0x04);
+    // SF, CRC ON (0x04)
+    LoRa_WriteReg(mod, REG_MODEM_CONFIG_2, (mod->SpreadingFactor << 4) | 0x04);
 
     // 5.Power and gain config (LNA)
     // Set LNA Gain (Max gain, Boost on) and PA_CONFIG i OCP for both modules,
@@ -594,7 +602,7 @@ int main(void)
 			    LoRa_SetMode(&loraTX, MODE_STDBY);
 			    HAL_Delay(2);
 			    LoRa_WriteReg(&loraTX, REG_FIFO_ADDR_PTR, 0);
-			    LoRa_WriteReg(&loraTX, REG_DIO_MAPPING_1, 0x00); // Map DIO0 na RxDone (00)
+			    LoRa_WriteReg(&loraTX, REG_DIO_MAPPING_1, 0x00); // Map DIO0 on RxDone (00)
 			    LoRa_WriteReg(&loraTX, REG_IRQ_FLAGS, 0xFF); // reset old flags
 			    txPacketReceivedFlag = 0;
 			    LoRa_SetMode(&loraTX, MODE_RX_CONTINUOUS);
