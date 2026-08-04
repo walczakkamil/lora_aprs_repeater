@@ -6,7 +6,7 @@ Prosty, energooszczędny **Repeter LoRa APRS** oparty na mikrokontrolerze STM32F
 
 ## 🚀 Możliwości i Funkcje
 
-* **Podwójne radio:** Niezależne moduły dla RX (odbioru) i TX (nadawania).
+* **Podwójne radio:** Niezależne moduły dla RX (odbioru z trackera) i TX (nadawania do iGate`a).
 * **Ciągły nasłuch (RX Continuous):** Nie przegapisz żadnej ramki.
 * **Buforowanie (Kolejka):** Kolejka FIFO na 5 pakietów – zapobiega utracie danych, gdy przychodzi wiele ramek naraz.
 * **Transparentność:** Przekazuje surowe ramki LoRa (włącznie z nagłówkami `3C FF 01`), dzięki czemu jest kompatybilny z większością trackerów i bramek iGate.

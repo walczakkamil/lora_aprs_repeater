@@ -6,7 +6,7 @@ A simple, energy-efficient **LoRa APRS Repeater** based on the STM32F103C8T6 mic
 
 ## 🚀 Features and Capabilities
 
-* **Dual Radio:** Independent modules for RX (receiving) and TX (transmitting).
+* **Dual Radio:** Independent modules for RX (receiving from tracker) and TX (transmitting to iGate).
 * **Continuous Listening (RX Continuous):** Ensures no frames are missed.
 * **Buffering (Queue):** FIFO queue for 5 packets – prevents data loss when multiple frames arrive simultaneously.
 * **Transparency:** Forwards raw LoRa frames (including 3C FF 01 headers), ensuring compatibility with most trackers and iGates.
