@@ -42,7 +42,7 @@ The device uses the **SPI1** bus shared by both radio modules.
 | SCK | **PA5** | Shared SPI |
 | NSS (CS) | **PA4** | Chip Select |
 | RST | **PB0** | Reset |
-| DIO0 | **PB1** | Interrupt (EXTI) |
+| DIO0 | **PB1** | Interrupt (EXTI1) |
 | 3.3V | 3.3V | |
 | GND | GND | |
 
