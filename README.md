@@ -122,6 +122,6 @@ Project prepared for STM32CubeIDE / STM32CubeMX / STM32CubeProgrammer.
 
 
 ---
-Project created for the LoRa APRS network by SP7FM.
+Project created for the LoRa APRS network by SP7FM and SP7DW.
 
 

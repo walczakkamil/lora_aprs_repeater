@@ -120,4 +120,4 @@ Projekt przygotowany dla STM32CubeIDE / STM32CubeMX / STM32CubeProgrammer.
 ![board_v1](./img/board_1.png)
 
 ---
-Projekt stworzony na potrzeby sieci LoRa APRS przez SP7FM.
+Projekt stworzony na potrzeby sieci LoRa APRS przez SP7FM oraz SP7DW.
