@@ -135,6 +135,16 @@ Projekt przygotowany dla STM32CubeIDE / STM32CubeMX / STM32CubeProgrammer.
 * **Biblioteki:** HAL Driver
 * **Język:* C (C99/GNU11)
 
+## Jak wygenerować własny firmware?
+
+Nie musisz instalować środowiska STM32CubeIDE ani kompilatora!
+
+1. Zrób **Fork** tego repozytorium na swoje konto GitHub.
+2. W swoim forku przejdź do zakładki **Actions** i włącz wykonywanie workflow.
+3. Wybierz z listy **Build Custom APRS Firmware** i kliknij **Run workflow**.
+4. Wypełnij formularz swoimi parametrami (znak, częstotliwości, moc itd.) i zatwierdź.
+5. Po zakończeniu budowania pobierz gotowe pliki binarne (`.bin` / `.hex`) z sekcji **Artifacts**.
+
 ## 🔗 Źródła
 
 * https://stm32-base.org/boards/STM32F103C8T6-Blue-Pill

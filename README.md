@@ -137,13 +137,22 @@ If pin PB12 is open (High state - PullUp), the repeater operates "silently" on U
 * **Power Supply:** Ensure the 3.3V source has sufficient current capability (LoRa transmission can draw >100mA).
 * **Separation:** Due to the close frequencies (100kHz spacing), physical separation of RX and TX antennas is recommended to prevent the transmitter from desensitizing the receiver, or use bandpass filters/duplexer.
 
-
 ## 📝 Compilation
 Project prepared for STM32CubeIDE / STM32CubeMX / STM32CubeProgrammer.
 
 * **MCU:** STM32F103C8Tx
 * **Libraries:** HAL Driver
 * **Language:** C (C99/GNU11)
+
+## How to Build Custom Firmware
+
+You don't need to install STM32CubeIDE or any toolchain locally!
+
+1. **Fork** this repository to your GitHub account.
+2. Go to the **Actions** tab in your forked repository and enable workflows if prompted.
+3. Select **Build Custom APRS Firmware** from the workflow list and click **Run workflow**.
+4. Fill in the form with your custom parameters (callsign, frequencies, power levels, etc.) and submit.
+5. Once the build completes, download your ready-to-flash binary files (`.bin` / `.hex`) from the **Artifacts** section.
 
 ## 🔗 Sources
 
