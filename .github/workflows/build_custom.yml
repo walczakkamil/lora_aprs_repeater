@@ -92,11 +92,20 @@ jobs:
           grep "#define LORA_RX_" STM32/Core/Src/main.c
           grep "#define LORA_TX_" STM32/Core/Src/main.c
 
-      - name: Fix Makefile Absolute Paths
+      - name: Fix Makefile Absolute Paths and Unsupported Flags
         run: |
+          # Fix linker path
           sed -i 's|C:.*STM32F103C8TX_FLASH.ld|../STM32F103C8TX_FLASH.ld|g' STM32/Debug/makefile
-          echo "Makefile path to linker: "
-          grep "STM32F103C8TX_FLASH.ld" STM32/Debug/makefile
+          
+          # Remove flag -fcyclomatic-complexity from Makefile and subdir.mk
+          find STM32/Debug -type f \( -name "makefile" -o -name "*.mk" \) -exec sed -i 's/-fcyclomatic-complexity//g' {} +
+          
+          echo "Makefile paths and flags updated successfully."
+
+      - name: Build Firmware
+        run: |
+          make -C STM32/Debug -j4 all
+
 
       - name: Build Firmware
         run: |
