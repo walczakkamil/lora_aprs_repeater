@@ -54,14 +54,14 @@ SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-// --- KONFIGURACJA SPRZĘTOWA (Hardcoded dla pewności) ---
-// RX Module (RFM96) - podłączony do SPI1
+// --- Hardware configuration ---
+// RX Module (RFM96) - SPI1
 #define RX_CS_PORT    GPIOA
 #define RX_CS_PIN     GPIO_PIN_4
 #define RX_RST_PORT   GPIOB
 #define RX_RST_PIN    GPIO_PIN_0
 
-// TX Module (RFM96) - podłączony do SPI1
+// TX Module (RFM96) - SPI1
 #define TX_CS_PORT    GPIOA
 #define TX_CS_PIN     GPIO_PIN_3
 #define TX_RST_PORT   GPIOB
@@ -69,11 +69,11 @@ UART_HandleTypeDef huart1;
 
 // Debug & LED
 #define DEBUG_PIN_PORT GPIOB
-#define DEBUG_PIN      GPIO_PIN_12 // Zmiana na PB12 zgodnie z MX_GPIO_Init
+#define DEBUG_PIN      GPIO_PIN_12
 #define LED_PORT       GPIOC
 #define LED_PIN        GPIO_PIN_13
 
-// --- PARAMETRY LORA ---
+// --- LORA Parameters---
 #define LORA_RX_FREQ    434855000
 #define LORA_TX_FREQ    434955000
 #define LORA_SF         9
@@ -94,8 +94,8 @@ typedef struct {
 } LoRaPacket;
 
 uint16_t tx_reset_counter = 0;
-uint32_t lastRebootTick = 0; 	// Przechowuje czas ostatniego restartu/startu
-uint8_t reset_time = 6;     	// Co ilę godzin robić restart
+uint32_t lastRebootTick = 0; 	// last restart/start time
+uint8_t reset_time = 6;     	// how often reboot, in h
 
 LoRaPacket txQueue[QUEUE_SIZE];
 uint8_t queueHead = 0;
@@ -105,7 +105,6 @@ uint32_t lastTelemetryTime = 0;
 volatile uint8_t packetReceivedFlag = 0;
 volatile uint8_t txPacketReceivedFlag = 0;
 
-// Struktura pomocnicza modułu
 typedef struct {
     GPIO_TypeDef* CS_Port;
     uint16_t      CS_Pin;
@@ -142,7 +141,7 @@ float GetInternalVoltage(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-// Rejestry SX1278
+// SX1278 registry
 #define REG_FIFO 0x00
 #define REG_OP_MODE 0x01
 #define REG_FRF_MSB 0x06
@@ -160,7 +159,7 @@ float GetInternalVoltage(void);
 #define REG_MODEM_CONFIG_2 0x1E
 #define REG_DIO_MAPPING_1 0x40
 
-// Tryby pracy
+// Operating mode
 #define MODE_LONG_RANGE_MODE 0x80
 #define MODE_SLEEP 0x00
 #define MODE_STDBY 0x01
@@ -185,27 +184,27 @@ void LoRa_WriteReg(LoRa_Module* mod, uint8_t addr, uint8_t val) {
 }
 
 void LoRa_Init(LoRa_Module* mod) {
-    // 0. Upewnij się, że CS jest wysoki przed startem
+    // 0. Check if CS is high before start
     HAL_GPIO_WritePin(mod->CS_Port, mod->CS_Pin, GPIO_PIN_SET);
 
-    // 1. Reset sprzętowy (Hardware Reset)
+    // 1. Hardware Reset
     HAL_GPIO_WritePin(mod->RST_Port, mod->RST_Pin, GPIO_PIN_RESET);
-    HAL_Delay(15); // Zwiększono nieco dla pewności stabilizacji napięcia
+    HAL_Delay(15);
     HAL_GPIO_WritePin(mod->RST_Port, mod->RST_Pin, GPIO_PIN_SET);
     HAL_Delay(15);
 
-    // 2. Wejście w tryb Sleep, aby odblokować dostęp do rejestrów LongRangeMode
+    // 2. Sleep mode, enable LongRangeMode registry
     LoRa_SetMode(mod, MODE_SLEEP);
     LoRa_WriteReg(mod, REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_SLEEP);
     HAL_Delay(5);
 
-    // 3. Konfiguracja częstotliwości (FRF)
+    // 3. frequency configuration (FRF)
     uint64_t frf = ((uint64_t)mod->Frequency << 19) / 32000000;
     LoRa_WriteReg(mod, REG_FRF_MSB, (uint8_t)(frf >> 16));
-    LoRa_WriteReg(mod, REG_FRF_MID, (uint8_t)(frf >> 8)); // Użycie nazwy MID zamiast MSB+1
+    LoRa_WriteReg(mod, REG_FRF_MID, (uint8_t)(frf >> 8));
     LoRa_WriteReg(mod, REG_FRF_LSB, (uint8_t)(frf >> 0));
 
-    // 4. Konfiguracja Modemu (BW, CR, SF)
+    // 4. Modem config (BW, CR, SF)
     // BW=125kHz, CR=4/7, Explicit Header
     uint8_t config1 = (7 << 4) | (LORA_CR << 1);
     LoRa_WriteReg(mod, REG_MODEM_CONFIG_1, config1);
@@ -213,19 +212,19 @@ void LoRa_Init(LoRa_Module* mod) {
     // SF=9, CRC ON (0x04)
     LoRa_WriteReg(mod, REG_MODEM_CONFIG_2, (LORA_SF << 4) | 0x04);
 
-    // 5. Konfiguracja mocy i wzmocnienia (LNA)
-    // Ustawiamy LNA Gain (Max gain, Boost on) oraz PA_CONFIG i OCP dla obu modułów,
-    // aby mogły one pracować dwukierunkowo (zarówno RX jak i TX).
+    // 5.Power and gain config (LNA)
+    // Set LNA Gain (Max gain, Boost on) and PA_CONFIG i OCP for both modules,
+    // to enable 2-way communication (RX and TX).
     LoRa_WriteReg(mod, REG_LNA, 0x23);
-    LoRa_WriteReg(mod, 0x0B, 0x2B); // OCP (Over Current Protection) ustawione na 100mA
-    LoRa_WriteReg(mod, 0x4D, 0x84); // 0x84 to tryb domyślny (do 17 dBm)
+    LoRa_WriteReg(mod, 0x0B, 0x2B); // OCP (Over Current Protection) set to 100mA
+    LoRa_WriteReg(mod, 0x4D, 0x84); // 0x84 as default (do 17 dBm)
     LoRa_WriteReg(mod, REG_PA_CONFIG, 0x8F); // PA_BOOST pin, 17dBm
 
-    // 6. Konfiguracja FIFO
+    // 6. FIFO config
     LoRa_WriteReg(mod, REG_FIFO_TX_BASE_ADDR, 0);
     LoRa_WriteReg(mod, REG_FIFO_RX_BASE_ADDR, 0);
 
-    // 7. Przejście do Standby (gotowość do pracy)
+    // 7. Standby mode
     LoRa_SetMode(mod, MODE_STDBY);
     HAL_Delay(5);
 
@@ -237,43 +236,41 @@ void LoRa_SetMode(LoRa_Module* mod, uint8_t mode) {
 }
 
 uint8_t LoRa_Send(LoRa_Module* mod, uint8_t* data, uint8_t len) {
-    // 1. Wybudzamy radio (przejście ze SLEEP do STDBY)
+    // 1. Wake radio from SLEEP to STDBY
     LoRa_SetMode(mod, MODE_STDBY);
 
-    // !!! WAŻNE: Dajemy czas na ustabilizowanie się oscylatora (Warm-up)
-    // Bez tego zapis do FIFO może się nie udać zaraz po wybudzeniu.
+    // !!! IMPORTANT: We allow time for the oscillator to stabilize (Warm-up).
+    // Without this, writing to the FIFO may fail immediately after waking up.
     HAL_Delay(2);
 
-    // 2. Wypełniamy bufor
+    // 2. fill the buffer
     LoRa_WriteReg(mod, REG_FIFO_ADDR_PTR, 0);
     for(int i=0; i<len; i++) {
         LoRa_WriteReg(mod, REG_FIFO, data[i]);
     }
 
-    // 3. Rozpoczynamy nadawanie
+    // 3. start transmitting
     LoRa_WriteReg(mod, 0x22, len);
     LoRa_SetMode(mod, MODE_TX);
 
-    // 4. Czekamy na koniec TX
+    // 4. Wait for TX finish
     uint32_t start = HAL_GetTick();
     uint8_t tx_success = 0;
-//    while((LoRa_ReadReg(mod, REG_IRQ_FLAGS) & 0x08) == 0) {
-//        if(HAL_GetTick() - start > 2000) break;
-//    }
-    while(HAL_GetTick() - start < 2000) { // Timeout 2 sekundy
+
+    while(HAL_GetTick() - start < 2000) { // Timeout 2 sec.
     	if(LoRa_ReadReg(mod, REG_IRQ_FLAGS) & 0x08) {
-    		tx_success = 1; // Znaleziono flagę TxDone!
+    		tx_success = 1; // TxDone!
     		break;
 		}
 	}
 
-    // 5. Czyścimy flagi
+    // 5. Clear flags
     LoRa_WriteReg(mod, REG_IRQ_FLAGS, 0xFF);
 
-    // 6. Idziemy spać zamiast czuwać (zmiana STDBY -> SLEEP)
+    // 6. Change mode STDBY to SLEEP, energy savings
     LoRa_SetMode(mod, MODE_SLEEP);
 
-    return tx_success; // Zwracamy wynik
+    return tx_success;
 }
 
 uint8_t LoRa_Receive(LoRa_Module* mod, uint8_t* buffer) {
@@ -288,14 +285,14 @@ uint8_t LoRa_Receive(LoRa_Module* mod, uint8_t* buffer) {
                 buffer[i] = LoRa_ReadReg(mod, REG_FIFO);
             }
         }
-        LoRa_WriteReg(mod, REG_IRQ_FLAGS, 0xFF); // Czyszczenie flag tylko gdy wystąpiło RxDone
+        LoRa_WriteReg(mod, REG_IRQ_FLAGS, 0xFF);
         return len;
     }
     return 0;
 }
 
 void DebugPrint(const char *format, ...) {
-    // Debug aktywny gdy PB12 zwarty do masy
+    // Debug mode, PB12
     if(HAL_GPIO_ReadPin(DEBUG_PIN_PORT, DEBUG_PIN) == GPIO_PIN_RESET) {
         char buffer[128];
         va_list args;
@@ -325,7 +322,6 @@ int Queue_Pop(uint8_t* buffer, uint8_t* out_tx_counter) {
     int len = txQueue[queueTail].len;
     memcpy(buffer, txQueue[queueTail].data, len);
 
-    // 2. Przypisujemy licznik do zmiennej wyjściowej
     if(out_tx_counter != NULL) {
         *out_tx_counter = txQueue[queueTail].tx_counter;
     }
@@ -339,28 +335,28 @@ float GetInternalVoltage(void) {
     if (HAL_ADC_PollForConversion(&hadc1, 100) == HAL_OK) {
         uint32_t adcVal = HAL_ADC_GetValue(&hadc1);
         if(adcVal == 0) return 0.0;
-        // VREFINT typowo 1.20V
+        // VREFINT usually is 1.20V
         return (1.20f * 4095.0f) / (float)adcVal;
     }
     return 0.0;
 }
 
 void SendTelemetry(void) {
-    char packet[200]; // 128-> 200 zwiększam bufor dla bezpieczeństwa
+    char packet[200];
     float voltage = GetInternalVoltage();
 
-    // Format pełnej ramki LoRa APRS:
-    // 1. Nagłówek LoRa: < (0x3C), 0xFF, 0x01
-    // 2. Nagłówek AX.25: Źródło>Cel,Ścieżka:
-    // 3. Dane APRS: !Lat/Lon#Komentarz
+    // LoRa APRS frame format:
+    // 1. Head LoRa: < (0x3C), 0xFF, 0x01
+    // 2. Head AX.25: Źródło>Cel,Ścieżka:
+    // 3. APRS Data: !Lat/Lon#Comment
     // 4. TX reset counter
     sprintf(packet, "\x3c\xff\x01%s>APRS,WIDE1-1:%s#%s BAT:%.2fV R_CNT:%u", APRS_CALLSIGN, APRS_COORDS, APRS_CALLSIGN, voltage, tx_reset_counter);
 
-    DebugPrint("TELEMETRY: %s\r\n", packet + 3); // +3 żeby nie wyświetlać krzaków w logu
-    Queue_Push((uint8_t*)packet, strlen(packet), 1); // Wysyłamy całość (z krzakami)
+    DebugPrint("TELEMETRY: %s\r\n", packet + 3); // +3 for better output codding
+    Queue_Push((uint8_t*)packet, strlen(packet), 1);
 }
 
-// Przerwanie EXTI (dla RX DIO0 - PB1 oraz TX DIO0 - PB11)
+// Interruption EXTI (RX DIO0 - PB1 and TX DIO0 - PB11)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     if(GPIO_Pin == LORA_DIO0_Pin) {
         packetReceivedFlag = 1;
@@ -369,38 +365,34 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
     }
 }
 
-// Sprawdzenie czy radio żyje
+// Check if radio is alvie
 uint8_t LoRa_IsAlive(LoRa_Module* mod) {
-    // Odczytujemy rejestr wersji (zawsze powinien zwracać 0x12 dla SX127x)
+    // Testing version registry, expected value 0x12 for SX127x
     uint8_t version = LoRa_ReadReg(mod, 0x42);
-
-    // Dodatkowo sprawdzamy, czy rejestr trybu nie zawiera niemożliwych wartości
     uint8_t mode = LoRa_ReadReg(mod, 0x01);
 
     if (version == 0x12 && mode != 0xFF) {
-        return 1; // Radio żyje
+        return 1; // Radio is alive
     }
-    return 0; // Radio nie odpowiada lub magistrala SPI "wisi"
+    return 0; // Radio not responding or SPI bus hang
 }
 
-// Funkcja do odczytu i inkrementacji licznika
 void Update_Reset_Counter(void) {
-    // 1. Włącz zasilanie modułu PWR i dostęp do rejestrów BKP
+    // 1. PWR and registry BKP up
     __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_RCC_BKP_CLK_ENABLE();
     HAL_PWR_EnableBkUpAccess();
 
-    // 2. Odczytaj wartość z rejestru 1 (możesz użyć DR1 do DR10)
-    // Rejestry BKP przechowują wartości 16-bitowe
+    // 2. Read 1st registry
     tx_reset_counter = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1);
 
-    // 3. Jeśli to był reset od Watchdoga (IWDG), zwiększ licznik
+    // 3. If reset by Watchdoga (IWDG), increment counter
     if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST)) {
         tx_reset_counter++;
         HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, tx_reset_counter);
     }
 
-    // 4. Wyczyść flagi resetu, aby przy następnym uruchomieniu wiedzieć, co go wywołało
+    // 4. Reset flags
     __HAL_RCC_CLEAR_RESET_FLAGS();
 }
 
@@ -444,25 +436,25 @@ int main(void)
 
   DebugPrint("SYS: Booting...\r\n");
 
-  // Inicjalizacja RX (434.855 MHz)
+  // Init RX (434.855 MHz)
   LoRa_Init(&loraRX);
-  // Mapowanie DIO0 na RxDone (00)
+  // Map DIO0 for RxDone (00)
   LoRa_WriteReg(&loraRX, REG_DIO_MAPPING_1, 0x00);
   LoRa_SetMode(&loraRX, MODE_RX_CONTINUOUS);
   DebugPrint("SYS: RX Init OK\r\n");
 
-  // Inicjalizacja TX (434.955 MHz)
+  // Init TX (434.955 MHz)
   LoRa_Init(&loraTX);
   LoRa_SetMode(&loraTX, MODE_SLEEP);
   DebugPrint("SYS: TX Init OK (Sleeping)\r\n");
 
-  // Led na start
+  // Start led blinking
   // LED ON (PC13 Low), delay, LED OFF (PC13 High)
   HAL_GPIO_WritePin(LED_PORT, LED_PIN, GPIO_PIN_RESET);
   HAL_Delay(500);
   HAL_GPIO_WritePin(LED_PORT, LED_PIN, GPIO_PIN_SET);
 
-  // Telemetria na start
+  // Send 1st telemetry
   SendTelemetry();
   lastTelemetryTime = HAL_GetTick();
 
@@ -474,23 +466,23 @@ int main(void)
   {
 	  // 1 - Testy wstępne
 
-	  // A. Planowy restart co 'reset_time' godzin (zapobiega nieoczekiwanym "dryfom" systemu)
+	  // A. Planing reset base on 'reset_time' in hours
 	  if ((reset_time != 0) && (HAL_GetTick() - lastRebootTick > (reset_time * 60 * 60 * 1000))) {
 	      DebugPrint("SYS: Scheduled %d hour reboot...\r\n", reset_time);
 	      HAL_Delay(100);
 	      NVIC_SystemReset();
 	  }
 
-	  // B. Sprawdzenie stanu radiów (IsAlive)
+	  // B. Check radios (IsAlive)
 	  uint8_t rxLive = (LoRa_ReadReg(&loraRX, 0x42) == 0x12);
 	  uint8_t txLive = (LoRa_ReadReg(&loraTX, 0x42) == 0x12);
 
 	  if (rxLive && txLive) {
-	      // Jeśli oba radia odpowiadają przez SPI - karmimy psa (Watchdog 4s)
+	      // Both radios are working - (Watchdog 4s)
 	      HAL_IWDG_Refresh(&hiwdg);
 	  }
 	  else {
-	      // Coś zawisło! Próbujemy ratować sytuację przed twardym resetem IWDG.
+	      // Something is wrong, trying reset
 	      if (!txLive) {
 	          tx_reset_counter++;
 	          HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, tx_reset_counter);
@@ -514,19 +506,19 @@ int main(void)
 	          HAL_Delay(15);
 
 	          LoRa_Init(&loraRX);
-	          // RX wraca do trybu ciągłego nasłuchu
+	          // RX back to listen
 	          LoRa_SetMode(&loraRX, 0x05); // MODE_RX_CONTINUOUS
 	      }
 
-	      // Ostatnia szansa: jeśli po resecie radia "wstały", powiadom watchdoga, by uniknąć resetu całego MCU
+	      // Last chance: if radio is still not working let watchdog know, prevent to reset MCU
 	      if ((LoRa_ReadReg(&loraRX, 0x42) == 0x12) && (LoRa_ReadReg(&loraTX, 0x42) == 0x12)) {
 	          HAL_IWDG_Refresh(&hiwdg);
 	          DebugPrint("SYS: Radios recovered. System continues.\r\n");
 	      }
 	  }
-	  /* --- KONIEC SEKCJI BEZPIECZEŃSTWA --- */
+	  /* --- End security section --- */
 
-	// 2. Obsługa odbioru
+	// 2. Reciving
     if(packetReceivedFlag) {
 		packetReceivedFlag = 0;
 		uint8_t rxBuffer[MAX_PKT_LEN];
@@ -535,18 +527,18 @@ int main(void)
 		if(len > 0) {
 			DebugPrint("RX: Recv %d bytes\r\n", len);
 
-			// --- DEBUG: Podgląd odebranych danych ---
-			// Sprawdzamy czy Debug Switch jest włączony (zwarty do masy)
+			// --- DEBUG ---
+			// check debug pin
 			if(HAL_GPIO_ReadPin(DEBUG_PIN_PORT, DEBUG_PIN) == GPIO_PIN_RESET) {
 
-				// 1. Wyświetlanie jako tekst (dla APRS)
+				// 1. Show as a text
 				char debugMsg[MAX_PKT_LEN + 1];
 				int safeLen = (len < MAX_PKT_LEN) ? len : MAX_PKT_LEN;
 				memcpy(debugMsg, rxBuffer, safeLen);
-				debugMsg[safeLen] = '\0'; // Bezpiecznik stringa
+				debugMsg[safeLen] = '\0';
 				DebugPrint("RX CONTENT (TXT): %s\r\n", debugMsg);
 
-				// 2. Wyświetlanie jako HEX (gdyby tekst był krzakami)
+				// 2. show as a HEX
 				char hexBuf[10];
 				DebugPrint("RX HEX: ");
 				for(int i=0; i<safeLen; i++) {
@@ -556,7 +548,7 @@ int main(void)
 				DebugPrint("\r\n");
 			}
 
-            // nowy pakiet w kolejce do wysłania
+            // new package in queue to send
 			Queue_Push(rxBuffer, len, 1);
 		}
 
@@ -564,7 +556,7 @@ int main(void)
 		LoRa_SetMode(&loraRX, MODE_RX_CONTINUOUS);
 	}
 
-    // 3. Obsługa nadawania
+    // 3. Transmitting
     if(queueHead != queueTail) {
 		uint8_t txBuffer[MAX_PKT_LEN];
 		uint8_t msg_tx_counter = 1;
@@ -574,16 +566,15 @@ int main(void)
 			DebugPrint("TX: Preparing to send...\r\n");
 			DebugPrint("TX msg. counter: %d\r\n", msg_tx_counter);
 
-			// --- NOWE: Podgląd treści ramki APRS w Debugu ---
-			// Sprawdzamy pin ręcznie, aby nie tracić czasu procesora na memcpy, gdy debug jest wyłączony
+			// pin check
 			if(HAL_GPIO_ReadPin(DEBUG_PIN_PORT, DEBUG_PIN) == GPIO_PIN_RESET) {
-				char debugMsg[MAX_PKT_LEN + 1]; // +1 na znak końca stringa
+				char debugMsg[MAX_PKT_LEN + 1]; // +1 for last string character
 
-				// Zabezpieczenie przed przepełnieniem
+				// Overfill protection
 				int safeLen = (len < MAX_PKT_LEN) ? len : MAX_PKT_LEN;
 
 				memcpy(debugMsg, txBuffer, safeLen);
-				debugMsg[safeLen] = '\0'; // Dodajemy terminator null
+				debugMsg[safeLen] = '\0';
 
 				DebugPrint("APRS CONTENT: %s\r\n", debugMsg);
 			}
@@ -596,15 +587,15 @@ int main(void)
 			if (LoRa_Send(&loraTX, txBuffer, len)) {
 			    DebugPrint("TX: Success\r\n");
 
-			    // --- NOWE: Odbiór odpowiedzi na TX przez 10s po wysłaniu ---
+			    // --- Read answer on TX, 10 sec. ---
 			    DebugPrint("TX_RX: Switching TX module to RX mode for 10s response window...\r\n");
 
-			    // Przygotowanie loraTX do odbioru: STDBY -> Reset FIFO ptr -> Clear IRQ -> RX_CONTINUOUS
+			    // Prepare TX for receiving: STDBY -> Reset FIFO ptr -> Clear IRQ -> RX_CONTINUOUS
 			    LoRa_SetMode(&loraTX, MODE_STDBY);
 			    HAL_Delay(2);
 			    LoRa_WriteReg(&loraTX, REG_FIFO_ADDR_PTR, 0);
-			    LoRa_WriteReg(&loraTX, REG_DIO_MAPPING_1, 0x00); // Mapowanie DIO0 na RxDone (00)
-			    LoRa_WriteReg(&loraTX, REG_IRQ_FLAGS, 0xFF); // Czyszczenie starych flag
+			    LoRa_WriteReg(&loraTX, REG_DIO_MAPPING_1, 0x00); // Map DIO0 na RxDone (00)
+			    LoRa_WriteReg(&loraTX, REG_IRQ_FLAGS, 0xFF); // reset old flags
 			    txPacketReceivedFlag = 0;
 			    LoRa_SetMode(&loraTX, MODE_RX_CONTINUOUS);
 
@@ -612,9 +603,9 @@ int main(void)
 			    uint8_t txReplyReceived = 0;
 
 			    while (HAL_GetTick() - waitStart < 10000) {
-			        HAL_IWDG_Refresh(&hiwdg); // Odświeżanie watchdoga
+			        HAL_IWDG_Refresh(&hiwdg); // refresh watchdog
 
-			        // 1. Sprawdzamy czy w międzyczasie nadszedł pakiet na loraRX (bezprzerwowe kolejkowanie RX)
+			        // 1. Check RX for new messages
 			        if (packetReceivedFlag) {
 			            packetReceivedFlag = 0;
 			            uint8_t rxBuf[MAX_PKT_LEN];
@@ -626,7 +617,7 @@ int main(void)
 			            LoRa_SetMode(&loraRX, MODE_RX_CONTINUOUS);
 			        }
 
-			        // 2. Sprawdzamy czy nadeszła odpowiedź na loraTX (wyzwolona przez EXTI15_10 na PB11 lub polling)
+			        // 2. Check for message on TX (interrupt on EXTI15_10 - PB11)
 			        uint8_t replyBuffer[MAX_PKT_LEN];
 			        uint8_t replyLen = 0;
 
@@ -634,7 +625,7 @@ int main(void)
 			            txPacketReceivedFlag = 0;
 			            replyLen = LoRa_Receive(&loraTX, replyBuffer);
 			        } else {
-			            // Polling bezpośredni (zabezpieczenie na przypadek braku przerwania)
+			            // direct pooling if interruption is not working
 			            replyLen = LoRa_Receive(&loraTX, replyBuffer);
 			        }
 
@@ -649,13 +640,13 @@ int main(void)
 			                DebugPrint("TX_RX REPLY CONTENT: %s\r\n", debugMsg);
 			            }
 
-			            // Retransmisja odebranej odpowiedzi przez moduł RX
+			            // Retransmitting answer on RX
 			            DebugPrint("TX_RX: Retransmitting reply via RX module...\r\n");
 			            LoRa_Send(&loraRX, replyBuffer, replyLen);
 			            LoRa_SetMode(&loraRX, MODE_RX_CONTINUOUS);
 
 			            txReplyReceived = 1;
-			            break; // Kończymy okno oczekiwania
+			            break;
 			        }
 
 			        HAL_Delay(5);
@@ -665,7 +656,7 @@ int main(void)
 			        DebugPrint("TX_RX: 10s wait window ended, no reply received.\r\n");
 			    }
 
-			    // Przełączenie loraTX z powrotem w uśpienie
+			    // loraTX go sleep
 			    LoRa_SetMode(&loraTX, MODE_SLEEP);
 			    // -------------------------------------------------------------
 			} else {
@@ -684,19 +675,19 @@ int main(void)
 		}
 	}
 
-    // 4. Telemetria
+    // 4. Telemetry
     if(HAL_GetTick() - lastTelemetryTime > TELEMETRY_INTERVAL) {
         SendTelemetry();
         lastTelemetryTime = HAL_GetTick();
     }
 
-    // 5. Sleep (tylko jeśli nic nie robimy)
+    // 5. Sleep
     if(queueHead == queueTail && !packetReceivedFlag) {
-        // Zatrzymanie Tick, aby nie budzić się co 1ms, ale EXTI LoRa obudzi MCU
-        // Uwaga: IWDG działa niezależnie, więc MCU i tak zresetuje się jeśli za długo pośpi.
-        // IWDG Reload jest ustawiony na ~4 sekundy, więc musimy się budzić częściej.
-        // Bezpieczniej nie używać SuspendTick przy IWDG bez dokładnego wyliczania.
-        // Używamy zwykłego WFI - budzi nas SysTick (1ms) lub LoRa EXTI.
+        // Suspend Tick to avoid waking up every 1ms, but the LoRa EXTI will wake up the MCU.
+        // Note: The IWDG is independent, so the MCU will still reset if it sleeps too long.
+        // IWDG Reload is set to ~4 seconds, so we need to wake up more often.
+        // It's safer not to use SuspendTick on the IWDG without careful calculation.
+        // We use regular WFI - SysTick (1ms) or LoRa EXTI wakes us up.
         HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     }
 
