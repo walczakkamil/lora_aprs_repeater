@@ -106,18 +106,17 @@ jobs:
         run: |
           make -C STM32/Debug -j4 all
 
-
-      - name: Build Firmware
+      - name: Generate Binary and Strip ELF
         run: |
-          make -C STM32/Debug -j4 all
-
-      - name: Rename Binary
-        run: |
-          mv STM32/Debug/Lora_APRS_repeater.elf Lora_APRS_repeater_${{ inputs.callsign }}.elf
+          arm-none-eabi-objcopy -O binary STM32/Debug/Lora_APRS_repeater.elf Lora_APRS_repeater_${{ inputs.callsign }}.bin
+          arm-none-eabi-objcopy -O ihex STM32/Debug/Lora_APRS_repeater.elf Lora_APRS_repeater_${{ inputs.callsign }}.hex
+          arm-none-eabi-strip --strip-debug STM32/Debug/Lora_APRS_repeater.elf -o Lora_APRS_repeater_${{ inputs.callsign }}.elf
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Firmware-${{ inputs.callsign }}
           path: |
+            Lora_APRS_repeater_${{ inputs.callsign }}.bin
+            Lora_APRS_repeater_${{ inputs.callsign }}.hex
             Lora_APRS_repeater_${{ inputs.callsign }}.elf
