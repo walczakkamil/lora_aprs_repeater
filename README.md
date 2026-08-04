@@ -116,6 +116,11 @@ Project prepared for STM32CubeIDE / STM32CubeMX / STM32CubeProgrammer.
 
 * https://stm32-base.org/boards/STM32F103C8T6-Blue-Pill
 
+## 📷 Foto
+
+![board_v1](./img/board_1.png)
+
+
 ---
 Project created for the LoRa APRS network by SP7FM.
 
