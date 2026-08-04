@@ -30,6 +30,26 @@ Ustawienia są identyczne dla RX i TX (z wyjątkiem częstotliwości):
 | **Coding Rate (CR)** | `4/7` |
 | **Moc nadawania** | `Max (0xFF)` |
 
+### Konfiguracja mocy wyjściowej dla wyjścia PA_BOOST (SX1278 / RFM96)
+
+Poniższa tabela przedstawia mapowanie docelowej mocy wyjściowej w dBm na wartości rejestrów dla wyjścia **PA_BOOST** (zakres +2 dBm do +20 dBm).
+
+| Moc docelowa (dBm) | Moc wyjściowa (mW) | Wskaźnik mocy (% mW)* | Bity OutputPower (3–0) | REG_PA_CONFIG (`0x09`) | REG_PA_DAC (`0x4D`) | REG_OCP (`0x0B`) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **20 dBm** | **~100 mW** | **200% (High Power)** | `15` (`0x0F`) | `0x8F` | **`0x87`** | **`0x3B`** (150mA) |
+| **17 dBm** | ~50 mW | 100% (Std Max) | `15` (`0x0F`) | `0x8F` | `0x84` | `0x2B` (100mA) |
+| **16 dBm** | ~40 mW | ~80% | `14` (`0x0E`) | `0x8E` | `0x84` | `0x2B` (100mA) |
+| **15 dBm** | ~32 mW | ~63% | `13` (`0x0D`) | `0x8D` | `0x84` | `0x2B` (100mA) |
+| **14 dBm** | ~25 mW | **50%** | `12` (`0x0C`) | `0x8C` | `0x84` | `0x2B` (100mA) |
+| **13 dBm** | ~20 mW | ~40% | `11` (`0x0B`) | `0x8B` | `0x84` | `0x2B` (100mA) |
+| **10 dBm** | ~10 mW | 20% | `8` (`0x08`) | `0x88` | `0x84` | `0x2B` (100mA) |
+| **5 dBm** | ~3.2 mW | ~6.3% | `3` (`0x03`) | `0x83` | `0x84` | `0x2B` (100mA) |
+| **2 dBm** | ~1.6 mW | ~3.1% (Min) | `0` (`0x00`) | `0x80` | `0x84` | `0x2B` (100mA) |
+
+*\*Uwaga: Tryb +20 dBm wymaga ograniczenia cyklu pracy (duty cycle 1%), aby nie przekroczyć parametrów termicznych chipu SX1278.*
+
+*\*Uwaga: Procentowa wartość mocy odnosi się do fizycznej mocy wypromieniowanej w miliwatach ($P_{\text{mW}} = 10^{\frac{P_{\text{dBm}}}{10}}$), gdzie 17 dBm (~50 mW) stanowi 100%.*
+
 ## 🔌 Schemat Połączeń (Pinout)
 
 Urządzenie wykorzystuje magistralę **SPI1** współdzieloną przez oba moduły radiowe.

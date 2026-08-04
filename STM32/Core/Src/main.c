@@ -80,10 +80,13 @@ UART_HandleTypeDef huart1;
 #define LORA_RX_SF      9
 #define LORA_RX_BW_IDX  7         		// 125 kHz (7 = 125 kHz)
 #define LORA_RX_CR      3         		// 4/7
+#define LORA_RX_POWER   17        		// Full power (17 dBm)
+//#define LORA_RX_POWER   20       		// +20 dBm (100 mW) - High Power PA_DAC
 
 #define LORA_TX_SF      9
 #define LORA_TX_BW_IDX  7         		// 125 kHz (7 = 125 kHz)
 #define LORA_TX_CR      3         		// 4/7
+#define LORA_TX_POWER   10        		// ~50% of power (~10 dBm)
 
 #define TELEMETRY_INTERVAL 3600000 		// 1h
 #define APRS_CALLSIGN   "SP7FM-1"
@@ -120,10 +123,11 @@ typedef struct {
     uint8_t       SpreadingFactor;
     uint8_t       BandwidthIdx;
     uint8_t       CodingRate;
+    uint8_t       Power;
 } LoRa_Module;
 
-LoRa_Module loraRX = { RX_CS_PORT, RX_CS_PIN, RX_RST_PORT, RX_RST_PIN, LORA_RX_FREQ, LORA_RX_SF, LORA_RX_BW_IDX, LORA_RX_CR };
-LoRa_Module loraTX = { TX_CS_PORT, TX_CS_PIN, TX_RST_PORT, TX_RST_PIN, LORA_TX_FREQ, LORA_TX_SF, LORA_TX_BW_IDX, LORA_TX_CR };
+LoRa_Module loraRX = { RX_CS_PORT, RX_CS_PIN, RX_RST_PORT, RX_RST_PIN, LORA_RX_FREQ, LORA_RX_SF, LORA_RX_BW_IDX, LORA_RX_CR, LORA_RX_POWER };
+LoRa_Module loraTX = { TX_CS_PORT, TX_CS_PIN, TX_RST_PORT, TX_RST_PIN, LORA_TX_FREQ, LORA_TX_SF, LORA_TX_BW_IDX, LORA_TX_CR, LORA_TX_POWER };
 
 /* USER CODE END PV */
 
@@ -224,9 +228,19 @@ void LoRa_Init(LoRa_Module* mod) {
     // Set LNA Gain (Max gain, Boost on) and PA_CONFIG i OCP for both modules,
     // to enable 2-way communication (RX and TX).
     LoRa_WriteReg(mod, REG_LNA, 0x23);
-    LoRa_WriteReg(mod, 0x0B, 0x2B); // OCP (Over Current Protection) set to 100mA
-    LoRa_WriteReg(mod, 0x4D, 0x84); // 0x84 as default (do 17 dBm)
-    LoRa_WriteReg(mod, REG_PA_CONFIG, 0x8F); // PA_BOOST pin, 17dBm
+    if (mod->Power >= 20) {
+        // High Power +20 dBm (100 mW)
+        LoRa_WriteReg(mod, 0x0B, 0x3B);          // OCP set to 150 mA (wymagane przy +20 dBm)
+        LoRa_WriteReg(mod, 0x4D, 0x87);          // RegPaDac: Enable +20 dBm mode
+        LoRa_WriteReg(mod, REG_PA_CONFIG, 0x8F); // PA_BOOST pin, max output power (15 + 5 dBm = 20 dBm)
+    } else {
+        // Standard mode (+2 dBm to +17 dBm)
+        LoRa_WriteReg(mod, 0x0B, 0x2B);          // OCP set to 100 mA
+        LoRa_WriteReg(mod, 0x4D, 0x84);          // RegPaDac: Normal/Default mode
+
+        uint8_t paPower = (mod->Power < 2) ? 0 : (mod->Power - 2);
+        LoRa_WriteReg(mod, REG_PA_CONFIG, 0x80 | paPower);
+    }
 
     // 6. FIFO config
     LoRa_WriteReg(mod, REG_FIFO_TX_BASE_ADDR, 0);

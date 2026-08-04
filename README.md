@@ -19,16 +19,45 @@ A simple, energy-efficient **LoRa APRS Repeater** based on the STM32F103C8T6 mic
 
 ## ⚙️ Radio Parameters (LoRa)
 
-Settings are identical for RX and TX (except for frequency):
+Settings for RX:
 
 | Parameter | Value |
 | :--- | :--- |
 | **RX Frequency** | `434.855 MHz` |
+| **Spreading Factor (SF)** | `9` |
+| **Bandwidth (BW)** | `125 kHz` |
+| **Coding Rate (CR)** | `4/7` |
+| **Tx Power** | `Max (0xFF)` |
+
+Settings are identical for TX:
+
+| Parameter | Value |
+| :--- | :--- |
 | **TX Frequency** | `434.955 MHz` |
 | **Spreading Factor (SF)** | `9` |
 | **Bandwidth (BW)** | `125 kHz` |
 | **Coding Rate (CR)** | `4/7` |
 | **Tx Power** | `Max (0xFF)` |
+
+### Output Power Configuration for PA_BOOST Pin (SX1278 / RFM96)
+
+The table below details the register mappings for target RF output power on the **PA_BOOST** pin (range: +2 dBm to +20 dBm).
+
+| Target Power (dBm) | Output Power (mW) | Power Level (% mW)* | OutputPower Bits (3–0) | REG_PA_CONFIG (`0x09`) | REG_PA_DAC (`0x4D`) | REG_OCP (`0x0B`) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **20 dBm** | **~100 mW** | **200% (High Power)** | `15` (`0x0F`) | `0x8F` | **`0x87`** | **`0x3B`** (150mA) |
+| **17 dBm** | ~50 mW | 100% (Std Max) | `15` (`0x0F`) | `0x8F` | `0x84` | `0x2B` (100mA) |
+| **16 dBm** | ~40 mW | ~80% | `14` (`0x0E`) | `0x8E` | `0x84` | `0x2B` (100mA) |
+| **15 dBm** | ~32 mW | ~63% | `13` (`0x0D`) | `0x8D` | `0x84` | `0x2B` (100mA) |
+| **14 dBm** | ~25 mW | **50%** | `12` (`0x0C`) | `0x8C` | `0x84` | `0x2B` (100mA) |
+| **13 dBm** | ~20 mW | ~40% | `11` (`0x0B`) | `0x8B` | `0x84` | `0x2B` (100mA) |
+| **10 dBm** | ~10 mW | 20% | `8` (`0x08`) | `0x88` | `0x84` | `0x2B` (100mA) |
+| **5 dBm** | ~3.2 mW | ~6.3% | `3` (`0x03`) | `0x83` | `0x84` | `0x2B` (100mA) |
+| **2 dBm** | ~1.6 mW | ~3.1% (Min) | `0` (`0x00`) | `0x80` | `0x84` | `0x2B` (100mA) |
+
+*\*Note: +20 dBm mode requires a max 1% duty cycle operation to prevent thermal overload on the SX1278 IC.*
+
+*\*Note: Percentage power level relates to true radiated RF power in milliwatts ($P_{\text{mW}} = 10^{\frac{P_{\text{dBm}}}{10}}$), referenced to 17 dBm (~50 mW) as 100%.*
 
 ## 🔌 Wiring Diagram (Pinout)
 
