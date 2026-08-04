@@ -19,18 +19,38 @@ on:
         description: 'GPS coordinates APRS (def. !0100.00N/00100.00E)'
         required: true
         default: '!5144.22N/01934.44E'
-      lora_sf:
-        description: 'Spreading Factor'
+      rx_sf:
+        description: 'RX Spreading Factor'
         required: false
         default: '9'
-      lora_bw_idx:
-        description: 'Signal Bandwidth'
+      rx_bw_idx:
+        description: 'RX Signal Bandwidth Index'
         required: false
         default: '7'
-      lora_cr:
-        description: 'Coding Rate'
+      rx_cr:
+        description: 'RX Coding Rate'
         required: false
         default: '3'
+      rx_power:
+        description: 'RX Power (dBm, 2-17)'
+        required: false
+        default: '17'
+      tx_sf:
+        description: 'TX Spreading Factor'
+        required: false
+        default: '9'
+      tx_bw_idx:
+        description: 'TX Signal Bandwidth Index'
+        required: false
+        default: '7'
+      tx_cr:
+        description: 'TX Coding Rate'
+        required: false
+        default: '3'
+      tx_power:
+        description: 'TX Power (dBm, 2-20)'
+        required: false
+        default: '10'
 
 jobs:
   build:
@@ -49,20 +69,28 @@ jobs:
         run: |
           sed -i 's/#define LORA_RX_FREQ.*/#define LORA_RX_FREQ    ${{ inputs.rx_freq }}/' STM32/Core/Src/main.c
           sed -i 's/#define LORA_TX_FREQ.*/#define LORA_TX_FREQ    ${{ inputs.tx_freq }}/' STM32/Core/Src/main.c
-          sed -i 's|#define APRS_CALLSIGN.*|#define APRS_CALLSIGN "${{ inputs.callsign }}"|' STM32/Core/Src/main.c
+          sed -i 's|#define APRS_CALLSIGN.*|#define APRS_CALLSIGN   "${{ inputs.callsign }}"|' STM32/Core/Src/main.c
           sed -i 's|#define APRS_COORDS.*|#define APRS_COORDS     "${{ inputs.coordinates }}"|' STM32/Core/Src/main.c
-          sed -i 's|#define LORA_SF.*|#define LORA_SF             ${{ inputs.lora_sf }}|' STM32/Core/Src/main.c
-          sed -i 's|#define LORA_BW_IDX.*|#define LORA_BW_IDX     ${{ inputs.lora_bw_idx }}|' STM32/Core/Src/main.c
-          sed -i 's|#define LORA_CR.*|#define LORA_CR             ${{ inputs.lora_cr }}|' STM32/Core/Src/main.c
+          
+          # RX
+          sed -i 's|#define LORA_RX_SF.*|#define LORA_RX_SF      ${{ inputs.rx_sf }}|' STM32/Core/Src/main.c
+          sed -i 's|#define LORA_RX_BW_IDX.*|#define LORA_RX_BW_IDX  ${{ inputs.rx_bw_idx }}|' STM32/Core/Src/main.c
+          sed -i 's|#define LORA_RX_CR.*|#define LORA_RX_CR      ${{ inputs.rx_cr }}|' STM32/Core/Src/main.c
+          sed -i 's|#define LORA_RX_POWER.*|#define LORA_RX_POWER   ${{ inputs.rx_power }}|' STM32/Core/Src/main.c
+          
+          # TX
+          sed -i 's|#define LORA_TX_SF.*|#define LORA_TX_SF      ${{ inputs.tx_sf }}|' STM32/Core/Src/main.c
+          sed -i 's|#define LORA_TX_BW_IDX.*|#define LORA_TX_BW_IDX  ${{ inputs.tx_bw_idx }}|' STM32/Core/Src/main.c
+          sed -i 's|#define LORA_TX_CR.*|#define LORA_TX_CR      ${{ inputs.tx_cr }}|' STM32/Core/Src/main.c
+          sed -i 's|#define LORA_TX_POWER.*|#define LORA_TX_POWER   ${{ inputs.tx_power }}|' STM32/Core/Src/main.c
           
           echo "Updated main.c from input:"
           grep "#define LORA_RX_FREQ" STM32/Core/Src/main.c
           grep "#define LORA_TX_FREQ" STM32/Core/Src/main.c
           grep "#define APRS_CALLSIGN" STM32/Core/Src/main.c
           grep "#define APRS_COORDS" STM32/Core/Src/main.c
-          grep "#define LORA_SF" STM32/Core/Src/main.c
-          grep "#define LORA_BW_IDX" STM32/Core/Src/main.c
-          grep "#define LORA_CR" STM32/Core/Src/main.c
+          grep "#define LORA_RX_" STM32/Core/Src/main.c
+          grep "#define LORA_TX_" STM32/Core/Src/main.c
 
       - name: Fix Makefile Absolute Paths
         run: |
@@ -84,4 +112,3 @@ jobs:
           name: Firmware-${{ inputs.callsign }}
           path: |
             Lora_APRS_repeater_${{ inputs.callsign }}.elf
-
