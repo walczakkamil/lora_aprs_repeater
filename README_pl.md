@@ -19,16 +19,25 @@ Prosty, energooszczędny **Repeter LoRa APRS** oparty na mikrokontrolerze STM32F
 
 ## ⚙️ Parametry Radiowe (LoRa)
 
-Ustawienia są identyczne dla RX i TX (z wyjątkiem częstotliwości):
+Ustawienia dla RX (domyślne):
 
 | Parametr | Wartość |
 | :--- | :--- |
 | **Częstotliwość RX** | `434.855 MHz` |
+| **Spreading Factor (SF)** | `9` |
+| **Bandwidth (BW)** | `125 kHz` |
+| **Coding Rate (CR)** | `4/7` |
+| **Moc nadawania** | `17dBm` |
+
+Ustawienia dla TX (domyślne):
+
+| Parametr | Wartość |
+| :--- | :--- |
 | **Częstotliwość TX** | `434.955 MHz` |
 | **Spreading Factor (SF)** | `9` |
 | **Bandwidth (BW)** | `125 kHz` |
 | **Coding Rate (CR)** | `4/7` |
-| **Moc nadawania** | `Max (0xFF)` |
+| **Moc nadawania** | `10dBm` |
 
 ### Konfiguracja mocy wyjściowej dla wyjścia PA_BOOST (SX1278 / RFM96)
 
