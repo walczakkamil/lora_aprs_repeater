@@ -27,7 +27,7 @@ Settings for RX:
 | **Spreading Factor (SF)** | `9` |
 | **Bandwidth (BW)** | `125 kHz` |
 | **Coding Rate (CR)** | `4/7` |
-| **Tx Power** | `Max (0xFF)` |
+| **Tx Power** | `17dBm` |
 
 Settings are identical for TX:
 
@@ -37,7 +37,7 @@ Settings are identical for TX:
 | **Spreading Factor (SF)** | `9` |
 | **Bandwidth (BW)** | `125 kHz` |
 | **Coding Rate (CR)** | `4/7` |
-| **Tx Power** | `Max (0xFF)` |
+| **Tx Power** | `10dBm` |
 
 ### Output Power Configuration for PA_BOOST Pin (SX1278 / RFM96)
 
