@@ -162,7 +162,7 @@ You don't need to install STM32CubeIDE or any toolchain locally!
 
 ![board_v1](./img/board_1.png)
 
-![programing](./img/img/20260804_183627.png)
+![programing](./img/20260804_183627.png)
 
 
 
