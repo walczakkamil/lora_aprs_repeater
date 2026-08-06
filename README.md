@@ -16,6 +16,7 @@ A simple, energy-efficient **LoRa APRS Repeater** based on the STM32F103C8T6 mic
 * **Energy Efficiency:** The processor enters SLEEP mode (WFI) when idle.
 * **Telemetry:** Automatic station status transmission every 1 hour (supply voltage, coordinates, and reset counter).
 * **Debug Mode:** Real-time monitoring of received and transmitted frames via UART when the service jumper is shorted.
+* **Power consumption:** In idle: 16,75mA, transmitting: ~40mA.
 
 ## ⚙️ Radio Parameters (LoRa)
 

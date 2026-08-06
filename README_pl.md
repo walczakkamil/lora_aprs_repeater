@@ -16,6 +16,7 @@ Prosty, energooszczędny **Repeter LoRa APRS** oparty na mikrokontrolerze STM32F
 * **Energooszczędność:** Procesor przechodzi w tryb `SLEEP` (WFI), gdy nie przetwarza danych.
 * **Telemetria:** Automatyczne wysyłanie statusu stacji co 1h (napięcie zasilania, koordynaty, licznik resetów).
 * **Tryb Debug:** Podgląd na żywo odbieranych i wysyłanych ramek przez UART po zwarciu zworki serwisowej.
+* **Pobór mocy:** W trybie ozcekiwania: 16,75mA, w czasie nadawania ~40mA.
 
 ## ⚙️ Parametry Radiowe (LoRa)
 
