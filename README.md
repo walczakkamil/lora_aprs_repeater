@@ -1,5 +1,7 @@
 # STM32 LoRa APRS Repeater (Bluepill + 2x RFM96W)
 
+![board_v1](./img/1786303152022.png)
+
 ## 📡 Project Overview
 
 A simple, energy-efficient **LoRa APRS Repeater** based on the STM32F103C8T6 microcontroller (Bluepill) and two RFM96W radio modules (SX1278). The device operates in "Cross-Band" mode (receives on one frequency, transmits on another) and features telemetry and watchdog functions.
