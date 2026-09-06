@@ -250,7 +250,8 @@ void LoRa_Init(LoRa_Module* mod) {
     LoRa_SetMode(mod, MODE_STDBY);
     HAL_Delay(5);
 
-    DebugPrint("LORA: Init OK for CS Pin %d\r\n", mod->CS_Pin);
+    uint8_t ver = LoRa_ReadReg(mod, 0x42);
+    DebugPrint("LORA: Init CS Pin %d (Ver: 0x%02X)\r\n", mod->CS_Pin, ver);
 }
 
 void LoRa_SetMode(LoRa_Module* mod, uint8_t mode) {
@@ -520,7 +521,8 @@ int main(void)
 	      }
 
 	      if (!rxLive) {
-	          DebugPrint("SYS: RX hang detected! Resetting RX radio...\r\n");
+	          uint8_t rxVal = LoRa_ReadReg(&loraRX, 0x42);
+	          DebugPrint("SYS: RX hang detected! (Reg 0x42 = 0x%02X, exp 0x12) Resetting RX radio...\r\n", rxVal);
 
 	          HAL_GPIO_WritePin(RX_RST_PORT, RX_RST_PIN, GPIO_PIN_RESET);
 	          HAL_Delay(15);
