@@ -165,7 +165,7 @@ Nie musisz instalować środowiska STM32CubeIDE ani kompilatora!
 
 ![board_v1](./img/board_1.png)
 
-![programing](./img/20260804_183627.png)
+![board_v2](./img/20260907_212833.jpg)
 
 ---
 Projekt stworzony na potrzeby sieci LoRa APRS przez SP7FM oraz SP7DW.
